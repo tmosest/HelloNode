@@ -7,9 +7,11 @@ const fs = require('fs');
 const serveIndex = require('serve-index');
 const FileUtility = require('./src/util/FileUtility');
 const DirectoryUtility = require('./src/util/DirectoryUtility');
+const PrinterUtility = require('./src/util/PrinterUtility');
 
 app.use(bodyParser.json()); // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })); // support encoded bodies
+app.use(fileUpload()); // File Uploads
 
 app.use('/public', express.static('public'), serveIndex('public', {'icons': true}));
 
@@ -57,6 +59,32 @@ app.get('/json/public/:folder', function(req, res, next) {
         files.sort();
         res.send(files);
     });
+});
+
+/**
+ * File uploads
+ */
+app.post('/upload', function(req, res) {
+    console.log(req.files); // the uploaded files
+    // We are going to assume that all uploaded files have a form name of image
+    console.log(req.files.image);
+    // Now we need to know what to name this before we move it to the right directory.
+    // Inside ./public/printing we are going to store two types of files
+    // One file named In-Progress and the rest will be of the form QX where X is a number
+    // So if the current highest is Q1 then we will name this file Q2.png
+    let newFileName = PrinterUtility.getNextQFileName();
+    console.log('New filename should be ' + newFileName);
+    // Now we can try to move the file
+    let newFilePath = PrinterUtility.getPrintingDirectory() + '/' + newFileName;
+    console.log('Moving file to ')
+    req.files.image.mv(newFilePath, function (err) {
+        if(err) {
+            console.error('Error moving to ' + newFilePath);
+            return res.status(500).send(err);
+        }
+        console.log('File moved to ' + newFilePath);
+        res.send('File uploaded');
+    })
 });
 
 app.listen(3000, () => console.log('Example app listening on port 3000!'));
